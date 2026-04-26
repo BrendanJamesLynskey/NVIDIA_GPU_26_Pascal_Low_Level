@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NVIDIA GPU 26 — Pascal Low-Level HW</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-card: #0d1117;
+            --bg-code: #161b22;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --accent: #76B900;
+            --accent-dim: #76B90044;
+            --accent-glow: #76B90033;
+            --border: #21262d;
+            --font-display: 'Space Grotesk', sans-serif;
+            --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+            --font-body: 'Inter', sans-serif;
+            --max-width: 900px;
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            font-size: 17px;
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+
+        /* ── Header ── */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem 1.5rem;
+            text-align: center;
+            position: relative;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .hero > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        .series-label {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: var(--accent);
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+        }
+
+        .hero h1 {
+            font-family: var(--font-display);
+            font-size: clamp(2rem, 5vw, 3.2rem);
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1.2;
+            margin-bottom: 1rem;
+        }
+
+        .hero h1 .accent {
+            color: var(--accent);
+        }
+
+        .hero .subtitle {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin-bottom: 2rem;
+        }
+
+        /* ── Tag Pills ── */
+        .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            justify-content: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .tag {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            background: var(--accent-dim);
+            white-space: nowrap;
+        }
+
+        /* ── Pipeline Flow Bar ── */
+        .pipeline {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 0.25rem;
+            margin-bottom: 1rem;
+            max-width: var(--max-width);
+        }
+
+        .pipeline-step {
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            padding: 0.3rem 0.7rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+
+        .pipeline-arrow {
+            color: var(--accent);
+            font-size: 0.9rem;
+            font-weight: 700;
+        }
+
+        /* ── Slides ── */
+        .slide {
+            min-height: 100vh;
+            max-width: var(--max-width);
+            margin: 0 auto;
+            padding: 4rem 1.5rem;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .slide-number {
+            font-family: var(--font-display);
+            font-size: 5rem;
+            font-weight: 700;
+            color: var(--accent-dim);
+            position: absolute;
+            top: 2rem;
+            right: 1.5rem;
+            line-height: 1;
+            user-select: none;
+        }
+
+        .slide h2 {
+            font-family: var(--font-display);
+            font-size: 1.9rem;
+            font-weight: 700;
+            color: var(--accent);
+            margin-bottom: 1.5rem;
+            line-height: 1.25;
+        }
+
+        .slide h3 {
+            font-family: var(--font-display);
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .slide p {
+            margin-bottom: 1rem;
+            color: var(--text-secondary);
+        }
+
+        .slide p strong {
+            color: var(--text-primary);
+        }
+
+        .slide ul, .slide ol {
+            margin-bottom: 1rem;
+            padding-left: 1.5rem;
+            color: var(--text-secondary);
+        }
+
+        .slide li {
+            margin-bottom: 0.4rem;
+        }
+
+        .slide li strong {
+            color: var(--text-primary);
+        }
+
+        /* ── Code Blocks ── */
+        .code-block {
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin: 1.25rem 0;
+            overflow: hidden;
+        }
+
+        .code-header {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--accent);
+            background: rgba(118, 185, 0, 0.08);
+            padding: 0.4rem 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .code-block pre {
+            margin: 0;
+            padding: 1rem;
+            overflow-x: auto;
+        }
+
+        .code-block code {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            line-height: 1.6;
+            color: #c9d1d9;
+        }
+
+        /* Syntax highlighting (manual) */
+        .kw { color: #ff7b72; }
+        .fn { color: #d2a8ff; }
+        .str { color: #a5d6ff; }
+        .cm { color: #8b949e; font-style: italic; }
+        .num { color: #79c0ff; }
+        .type { color: #ffa657; }
+        .dir { color: #ff7b72; }
+        .mac { color: #ffa657; }
+
+        /* ── Tables ── */
+        .table-wrap {
+            overflow-x: auto;
+            margin: 1.25rem 0;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        th {
+            background: var(--bg-code);
+            color: var(--accent);
+            font-weight: 600;
+            text-align: left;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border);
+            font-family: var(--font-display);
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 0.6rem 1rem;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:nth-child(even) td {
+            background: rgba(13, 17, 23, 0.5);
+        }
+
+        /* ── Diagrams ── */
+        .diagram-flow {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            margin: 1.5rem 0;
+            padding: 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+
+        .diagram-box {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .diagram-box.accent {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: rgba(118, 185, 0, 0.08);
+        }
+
+        .diagram-box.dim {
+            color: var(--text-secondary);
+            border-color: var(--border);
+        }
+
+        .diagram-arrow {
+            color: var(--accent);
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+
+        /* Vertical flow diagrams */
+        .diagram-vertical {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.3rem;
+            margin: 1.5rem 0;
+            padding: 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+
+        .diagram-vertical .diagram-arrow {
+            font-size: 1.1rem;
+        }
+
+        /* Nested hierarchy diagram */
+        .hierarchy {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            margin: 1.5rem 0;
+            padding: 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+
+        .hierarchy-level {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .hierarchy-label {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            min-width: 80px;
+            text-align: right;
+        }
+
+        .hierarchy-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.35rem;
+        }
+
+        .hierarchy-item {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+
+        .hierarchy-item.accent {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: rgba(118, 185, 0, 0.08);
+        }
+
+        /* Grid diagram */
+        .diagram-grid {
+            display: grid;
+            gap: 0.75rem;
+            margin: 1.5rem 0;
+            padding: 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+
+        .diagram-grid.cols-2 {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .diagram-grid.cols-3 {
+            grid-template-columns: 1fr 1fr 1fr;
+        }
+
+        .diagram-panel {
+            padding: 1rem;
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+        }
+
+        .diagram-panel.accent-border {
+            border-left: 3px solid var(--accent);
+        }
+
+        .diagram-panel h4 {
+            font-family: var(--font-display);
+            font-size: 1rem;
+            color: var(--accent);
+            margin-bottom: 0.5rem;
+        }
+
+        .diagram-panel p, .diagram-panel ul {
+            font-size: 0.85rem;
+        }
+
+        /* ── Callout Boxes ── */
+        .callout {
+            background: var(--bg-card);
+            border-left: 3px solid var(--accent);
+            border-radius: 0 8px 8px 0;
+            padding: 1rem 1.25rem;
+            margin: 1.25rem 0;
+        }
+
+        .callout p {
+            margin-bottom: 0;
+        }
+
+        .callout .callout-label {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.3rem;
+        }
+
+        /* ── Tier Visual ── */
+        .tier-visual {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin: 1.5rem 0;
+            padding: 1.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+
+        .tier-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .tier-label {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            min-width: 90px;
+            text-align: right;
+        }
+
+        .tier-fill {
+            height: 32px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            padding: 0 0.75rem;
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            white-space: nowrap;
+            transition: width 0.6s ease;
+        }
+
+        .tier-cost {
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            min-width: 70px;
+        }
+
+        /* ── Contents list ── */
+        .contents-list {
+            list-style: none;
+            padding-left: 0;
+            counter-reset: contents;
+        }
+
+        .contents-list li {
+            counter-increment: contents;
+            padding: 0.6rem 0;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .contents-list li:last-child {
+            border-bottom: none;
+        }
+
+        .contents-list li::before {
+            content: counter(contents, decimal-leading-zero);
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: var(--accent);
+            min-width: 2rem;
+        }
+
+        .contents-list a {
+            color: var(--text-primary);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .contents-list a:hover {
+            color: var(--accent);
+        }
+
+        /* ── Footer ── */
+        .footer {
+            text-align: center;
+            padding: 3rem 1.5rem;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            border-top: 1px solid var(--border);
+            max-width: var(--max-width);
+            margin: 0 auto;
+        }
+
+        .footer a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 640px) {
+            .slide {
+                padding: 3rem 1rem;
+                min-height: auto;
+            }
+
+            .slide-number {
+                font-size: 3rem;
+                top: 1.5rem;
+                right: 1rem;
+            }
+
+            .slide h2 {
+                font-size: 1.5rem;
+            }
+
+            .diagram-grid.cols-2,
+            .diagram-grid.cols-3 {
+                grid-template-columns: 1fr;
+            }
+
+            .pipeline {
+                gap: 0.15rem;
+            }
+
+            .pipeline-step {
+                font-size: 0.6rem;
+                padding: 0.2rem 0.4rem;
+            }
+
+            .hero h1 {
+                font-size: 1.8rem;
+            }
+
+            table {
+                font-size: 0.78rem;
+            }
+
+            .tier-label {
+                min-width: 60px;
+                font-size: 0.65rem;
+            }
+
+            .tier-fill {
+                font-size: 0.6rem;
+                height: 26px;
+            }
+        }
+
+        /* ── Interactive controls (added for Local LLM series) ── */
+        .control-panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.25rem;
+            margin: 1.25rem 0;
+        }
+        .control-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+        .control-row label {
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            min-width: 180px;
+        }
+        .control-row input[type="range"] {
+            flex: 1;
+            min-width: 160px;
+            accent-color: var(--accent);
+        }
+        .control-row input[type="number"],
+        .control-row select {
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            border-radius: 4px;
+            padding: 0.3rem 0.5rem;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+        }
+        .control-row .val {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: var(--accent);
+            min-width: 80px;
+            text-align: right;
+        }
+        .btn {
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            padding: 0.4rem 0.9rem;
+            background: var(--accent-dim);
+            color: var(--accent);
+            border: 1px solid var(--accent);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+        .btn:hover { background: rgba(118, 185, 0, 0.2); }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn.secondary {
+            background: var(--bg-code);
+            color: var(--text-secondary);
+            border-color: var(--border);
+        }
+        .result-box {
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--accent);
+            border-radius: 4px;
+            padding: 0.75rem 1rem;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: var(--text-primary);
+            margin-top: 0.75rem;
+        }
+        .result-box .line-label { color: var(--text-secondary); }
+        .result-box .line-val   { color: var(--accent); font-weight: 600; }
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+        .metric {
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.6rem 0.8rem;
+            text-align: center;
+        }
+        .metric .metric-label {
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+        .metric .metric-value {
+            font-family: var(--font-display);
+            font-size: 1.25rem;
+            color: var(--accent);
+            font-weight: 600;
+            margin-top: 0.2rem;
+        }
+
+        /* Canvas / SVG containers */
+        .canvas-wrap {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            margin: 1.25rem 0;
+            overflow-x: auto;
+        }
+        .canvas-wrap canvas,
+        .canvas-wrap svg {
+            display: block;
+            margin: 0 auto;
+            max-width: 100%;
+        }
+
+        /* Small inline badge */
+        .badge {
+            display: inline-block;
+            font-family: var(--font-mono);
+            font-size: 0.65rem;
+            padding: 0.1rem 0.45rem;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            vertical-align: middle;
+            margin-left: 0.3rem;
+        }
+        .badge.ok    { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+        .badge.warn  { border-color: #ffa657; color: #ffa657; background: rgba(255,166,87,0.08); }
+        .badge.bad   { border-color: #ff7b72; color: #ff7b72; background: rgba(255,123,114,0.08); }
+
+    </style>
+</head>
+<body>
+
+<header class="hero">
+    <div class="series-label">NVIDIA GPU Architectures Series — Presentation 26</div>
+    <h1>Inside <span class="accent">Pascal</span> &mdash; The First HBM and NVLink GPU</h1>
+    <p class="subtitle">A low-level look at NVIDIA's 2016 architecture: the GP100 die that introduced HBM2 and NVLink 1.0 to the world, and the GP102/104/106 consumer dies that powered the GTX 10 series. Block diagrams, arithmetic, voltages, clocks, capacities, and the standards Pascal first put in the field.</p>
+
+    <div class="tags">
+        <span class="tag">GP100</span><span class="tag">GP102</span><span class="tag">P100</span>
+        <span class="tag">GTX 1080 Ti</span><span class="tag">TSMC 16FF+</span>
+        <span class="tag">HBM2</span><span class="tag">GDDR5X</span><span class="tag">NVLink 1.0</span>
+        <span class="tag">FP16x2</span><span class="tag">PCIe 3.0</span>
+    </div>
+
+    <div class="pipeline">
+        <span class="pipeline-step">Die</span>
+        <span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">GPC</span>
+        <span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">SM</span>
+        <span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">FP/INT</span>
+        <span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">L2</span>
+        <span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">HBM2</span>
+        <span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">NVLink 1.0</span>
+    </div>
+</header>
+
+<section class="slide" id="slide-00">
+    <div class="slide-number">00</div>
+    <h2>Topics We'll Cover</h2>
+    <p>A low-level tour of NVIDIA's Pascal generation &mdash; the die plan, the SM, arithmetic units, process, voltage and clocks, memory, NVLink, and the things Pascal introduced to the rest of the GPU industry.</p>
+    <ul class="contents-list">
+        <li><a href="#slide-01">Pascal at a Glance</a></li>
+        <li><a href="#slide-02">GP100 Die &mdash; Block Diagram</a></li>
+        <li><a href="#slide-03">The Pascal SM (GP100 Variant)</a></li>
+        <li><a href="#slide-04">Arithmetic Units &amp; FP16x2</a></li>
+        <li><a href="#slide-05">Process &mdash; TSMC 16FF+ &amp; Samsung 14LPP</a></li>
+        <li><a href="#slide-06">Voltage, Power, Package</a></li>
+        <li><a href="#slide-07">Clocks &amp; Speeds</a></li>
+        <li><a href="#slide-08">Memory &mdash; HBM2 First Time, GDDR5X Second</a></li>
+        <li><a href="#slide-09">NVLink 1.0 &mdash; The Original</a></li>
+        <li><a href="#slide-10">PCIe 3.0, Display, NVENC/NVDEC</a></li>
+        <li><a href="#slide-11">Pascal's Innovations</a></li>
+        <li><a href="#slide-12">Interactive: Pascal SKU Picker</a></li>
+    </ul>
+</section>
+
+<section class="slide" id="slide-01">
+    <div class="slide-number">01</div>
+    <h2>Pascal at a Glance</h2>
+    <p>Pascal launched in <strong>2016</strong> as the first 16 nm NVIDIA architecture, and the first to ship HBM2 and NVLink. Two distinct die families: <strong>GP100</strong> for HPC/AI on TSMC 16FF+ with HBM2, and <strong>GP102/104/106/107/108</strong> for graphics on the same node with GDDR5/5X.</p>
+
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Die</th><th>SMs</th><th>FP32 cores</th><th>Memory</th><th>SKU</th><th>TDP</th></tr></thead>
+            <tbody>
+                <tr><td><strong>GP100</strong></td><td>60 (56 enabled)</td><td>3584</td><td>16 GB HBM2 @ 720 GB/s</td><td>Tesla P100</td><td>300 W (SXM)</td></tr>
+                <tr><td><strong>GP102</strong></td><td>30 (28 enabled)</td><td>3584</td><td>11&ndash;12 GB GDDR5X</td><td>GTX 1080 Ti / Titan Xp / Quadro P6000</td><td>250 W</td></tr>
+                <tr><td><strong>GP104</strong></td><td>20</td><td>2560</td><td>8 GB GDDR5/5X</td><td>GTX 1080 / 1070 / Tesla P4</td><td>180 W</td></tr>
+                <tr><td><strong>GP106</strong></td><td>10</td><td>1280</td><td>3&ndash;6 GB GDDR5</td><td>GTX 1060</td><td>120 W</td></tr>
+                <tr><td><strong>GP107 / GP108</strong></td><td>6 / 3</td><td>768 / 384</td><td>2&ndash;4 GB GDDR5</td><td>GTX 1050 / 1030</td><td>30&ndash;75 W</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="callout">
+        <div class="callout-label">Why two die families?</div>
+        <p>GP100's SM is FP-heavy and includes FP64 (1:2 of FP32) and FP16x2 vector ops &mdash; designed for scientific computing and the still-young deep-learning workload. GP10x graphics dies drop FP64 to a 1:32 token rate and skip FP16x2 in favour of bigger ROPs and texture units. <strong>One architecture, two physical implementations.</strong></p>
+    </div>
+</section>
+
+<section class="slide" id="slide-02">
+    <div class="slide-number">02</div>
+    <h2>GP100 Die &mdash; Block Diagram</h2>
+    <p>GP100 is organised as a hierarchy of clusters. The top-level chip-wide units are the L2 cache slices, the memory controllers, and the host interface; everything else fans out from a small number of <strong>GPCs</strong> (Graphics Processing Clusters).</p>
+
+    <div class="hierarchy">
+        <div class="hierarchy-level">
+            <div class="hierarchy-label">Chip</div>
+            <div class="hierarchy-items"><span class="hierarchy-item accent">GP100 die &mdash; 610 mm&sup2;, 15.3 B transistors</span></div>
+        </div>
+        <div class="hierarchy-level">
+            <div class="hierarchy-label">GPCs</div>
+            <div class="hierarchy-items">
+                <span class="hierarchy-item">GPC0</span><span class="hierarchy-item">GPC1</span><span class="hierarchy-item">GPC2</span><span class="hierarchy-item">GPC3</span><span class="hierarchy-item">GPC4</span><span class="hierarchy-item">GPC5</span>
+            </div>
+        </div>
+        <div class="hierarchy-level">
+            <div class="hierarchy-label">TPCs / GPC</div>
+            <div class="hierarchy-items"><span class="hierarchy-item">5 TPCs &times; 6 GPCs = 30 TPCs</span></div>
+        </div>
+        <div class="hierarchy-level">
+            <div class="hierarchy-label">SMs / TPC</div>
+            <div class="hierarchy-items"><span class="hierarchy-item">2 SMs &times; 30 TPCs = 60 SMs (56 enabled on P100)</span></div>
+        </div>
+        <div class="hierarchy-level">
+            <div class="hierarchy-label">Memory</div>
+            <div class="hierarchy-items"><span class="hierarchy-item">8 &times; 512 KB L2 = 4 MB total</span><span class="hierarchy-item accent">4 stacks HBM2 &mdash; 4096-bit bus</span></div>
+        </div>
+        <div class="hierarchy-level">
+            <div class="hierarchy-label">IO</div>
+            <div class="hierarchy-items"><span class="hierarchy-item">PCIe 3.0 x16</span><span class="hierarchy-item accent">4 NVLink 1.0 lanes</span></div>
+        </div>
+    </div>
+
+    <p>Each GPC contains a raster engine, 5 TPCs, and per-GPC fixed-function graphics blocks. Each TPC is two SMs sharing texture units. Total: 60 SMs on a 610 mm&sup2; die.</p>
+</section>
+
+<section class="slide" id="slide-03">
+    <div class="slide-number">03</div>
+    <h2>The Pascal SM (GP100 Variant)</h2>
+    <p>The GP100 SM is split into <strong>two partitions</strong>, each with its own warp scheduler. Total per SM:</p>
+
+    <div class="diagram-grid cols-2">
+        <div class="diagram-panel accent-border">
+            <h4>Compute Resources</h4>
+            <ul>
+                <li><strong>64 FP32 cores</strong> (32 per partition)</li>
+                <li><strong>32 FP64 cores</strong> (16 per partition) &mdash; 1:2 FP64:FP32 rate</li>
+                <li><strong>FP16x2 dual-issue</strong> &mdash; treats two FP16 values as one packed register</li>
+                <li>16 LD/ST units, 16 SFUs, 4 texture units</li>
+                <li>2 warp schedulers, 2 dispatch units each</li>
+            </ul>
+        </div>
+        <div class="diagram-panel accent-border">
+            <h4>Memory Resources</h4>
+            <ul>
+                <li><strong>256 KB register file</strong> (65536 32-bit registers)</li>
+                <li><strong>64 KB shared memory</strong> &mdash; statically partitioned from L1</li>
+                <li><strong>24 KB L1 / texture cache</strong></li>
+                <li>4 KB instruction cache</li>
+            </ul>
+        </div>
+    </div>
+
+    <p>GP10x graphics SMs differ: 128 FP32 cores per SM (4 partitions of 32) but only 4 FP64 cores per SM (1:32 rate) and no FP16x2 dual-issue. Larger 96 KB shared memory is statically partitioned with a 48 KB L1.</p>
+</section>
+
+<section class="slide" id="slide-04">
+    <div class="slide-number">04</div>
+    <h2>Arithmetic Units &amp; FP16x2</h2>
+    <p>Pascal predates tensor cores. Every matmul runs on the FP32 SIMT lanes &mdash; no fused multiply-accumulate at higher density. The architecture's headline arithmetic feature was <strong>FP16x2</strong>: pack two FP16 values into one 32-bit register and execute one packed instruction per cycle, doubling the FLOP rate over scalar FP16. This was the first hardware support for half-precision deep learning at full throughput.</p>
+
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Operation</th><th>Per SM per cycle</th><th>P100 peak (1480 MHz boost)</th></tr></thead>
+            <tbody>
+                <tr><td>FP32 FMA</td><td>64</td><td>10.6 TFLOPS</td></tr>
+                <tr><td>FP64 FMA</td><td>32</td><td>5.3 TFLOPS</td></tr>
+                <tr><td>FP16x2 packed</td><td>128</td><td>21.2 TFLOPS</td></tr>
+                <tr><td>INT32 / INT16</td><td>64 (shared with FP32 datapath)</td><td>10.6 TIPS (on FP32 path)</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="callout">
+        <div class="callout-label">Why FP16x2 mattered</div>
+        <p>FP16 was emerging as the storage format for neural-net training weights. Without packed math, FP16 lanes ran at the same rate as FP32 &mdash; you got memory savings but no speed-up. FP16x2 gave a real 2&times; FLOP gain. This was Pascal's bridge from scientific computing into deep learning, and it set the stage for proper tensor cores in Volta.</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-05">
+    <div class="slide-number">05</div>
+    <h2>Process &mdash; TSMC 16FF+ &amp; Samsung 14LPP</h2>
+    <p>Pascal was NVIDIA's first FinFET node, an enormous density jump over Maxwell's planar 28 nm. <strong>GP100, GP104, GP106</strong> on <strong>TSMC 16FF+</strong>; <strong>GP107, GP108</strong> on <strong>Samsung 14LPP</strong> (lower-cost, lower-leakage variant). 16FF+ delivered roughly 2&times; transistor density and 30% lower switching energy versus 28HPM Maxwell.</p>
+
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Die</th><th>Process</th><th>Transistors</th><th>Area</th><th>Density (M/mm&sup2;)</th></tr></thead>
+            <tbody>
+                <tr><td>GP100</td><td>TSMC 16FF+</td><td>15.3 B</td><td>610 mm&sup2;</td><td>25.1</td></tr>
+                <tr><td>GP102</td><td>TSMC 16FF+</td><td>11.8 B</td><td>471 mm&sup2;</td><td>25.1</td></tr>
+                <tr><td>GP104</td><td>TSMC 16FF+</td><td>7.2 B</td><td>314 mm&sup2;</td><td>22.9</td></tr>
+                <tr><td>GP106</td><td>TSMC 16FF+</td><td>4.4 B</td><td>200 mm&sup2;</td><td>22.0</td></tr>
+                <tr><td>GP107</td><td>Samsung 14LPP</td><td>3.3 B</td><td>132 mm&sup2;</td><td>25.0</td></tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="slide" id="slide-06">
+    <div class="slide-number">06</div>
+    <h2>Voltage, Power, Package</h2>
+    <p>Pascal's <strong>core voltage runs 0.80&ndash;1.06 V</strong> depending on boost state, with a per-die voltage curve baked into the GPU's bootstrap. Power delivery on P100 SXM uses a 16-phase digital VRM at 700 A peak; reference GTX 1080 Ti boards use 7+2 phase designs at ~250 A.</p>
+
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>SKU</th><th>TDP</th><th>Connector</th><th>Package</th></tr></thead>
+            <tbody>
+                <tr><td>Tesla P100 (SXM2)</td><td>300 W</td><td>SXM2 mezzanine</td><td>2.5D HBM2 + GP100 on Si interposer</td></tr>
+                <tr><td>Tesla P100 (PCIe)</td><td>250 W</td><td>2&times; 8-pin PCIe</td><td>same package, different board</td></tr>
+                <tr><td>GTX 1080 Ti</td><td>250 W</td><td>1&times; 8-pin + 1&times; 6-pin</td><td>flip-chip BGA, GDDR5X around die</td></tr>
+                <tr><td>GTX 1080 / 1070</td><td>180 W / 150 W</td><td>1&times; 8-pin</td><td>flip-chip BGA</td></tr>
+                <tr><td>Tesla P4</td><td>75 W (no aux)</td><td>PCIe slot only</td><td>passively cooled, datacenter inference</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>P100 was the <strong>first NVIDIA part to use a 2.5D silicon-interposer package</strong> &mdash; GPU die plus four HBM2 stacks bonded onto a passive silicon interposer mounted on an organic substrate. CoWoS-S was new at TSMC; yields were challenging through 2016.</p>
+</section>
+
+<section class="slide" id="slide-07">
+    <div class="slide-number">07</div>
+    <h2>Clocks &amp; Speeds</h2>
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>SKU</th><th>Base</th><th>Boost</th><th>Memory clock</th><th>Effective bandwidth</th></tr></thead>
+            <tbody>
+                <tr><td>P100 SXM2</td><td>1328 MHz</td><td>1480 MHz</td><td>HBM2 1.4 Gbps/pin</td><td>720 GB/s</td></tr>
+                <tr><td>GTX 1080 Ti</td><td>1480 MHz</td><td>1582 MHz</td><td>GDDR5X 11 Gbps/pin</td><td>484 GB/s</td></tr>
+                <tr><td>GTX 1080</td><td>1607 MHz</td><td>1733 MHz</td><td>GDDR5X 10 Gbps/pin</td><td>320 GB/s</td></tr>
+                <tr><td>Titan Xp</td><td>1405 MHz</td><td>1582 MHz</td><td>GDDR5X 11.4 Gbps/pin</td><td>547 GB/s</td></tr>
+                <tr><td>Tesla P4</td><td>810 MHz</td><td>1063 MHz</td><td>GDDR5 6 Gbps/pin</td><td>192 GB/s</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p>Pascal introduced <strong>GPU Boost 3.0</strong> &mdash; each voltage point on the V/F curve is independently programmable, allowing per-state overclocking. Modern <code>nvidia-smi -q -d CLOCK</code> still reports the same V/F state machine that Pascal first exposed.</p>
+</section>
+
+<section class="slide" id="slide-08">
+    <div class="slide-number">08</div>
+    <h2>Memory &mdash; HBM2 First Time, GDDR5X Second</h2>
+    <p>Pascal shipped the <strong>industry's first HBM2 product</strong>. P100 connects to 4 stacks of 4-Hi HBM2 over a 4096-bit bus; each stack is 4 GB at launch. GP10x graphics dies use GDDR5 or the new GDDR5X (Micron's PAM4-on-DDR variant, doubling bandwidth at the same data rate as GDDR5).</p>
+
+    <div class="diagram-grid cols-2">
+        <div class="diagram-panel accent-border">
+            <h4>HBM2 (P100)</h4>
+            <ul>
+                <li><strong>4 stacks &times; 4 GB = 16 GB</strong></li>
+                <li>4 stacks &times; 8 channels &times; 128-bit = <strong>4096-bit</strong> bus</li>
+                <li>Pin rate <strong>1.4 Gbps</strong> &rarr; 720 GB/s</li>
+                <li>2.5D Si interposer, micro-bumps, TSVs</li>
+                <li>ECC SECDED on by default</li>
+            </ul>
+        </div>
+        <div class="diagram-panel accent-border">
+            <h4>GDDR5X (1080 Ti / 1080 / Titan Xp)</h4>
+            <ul>
+                <li><strong>352-bit bus</strong> on GP102 (11 channels &times; 32-bit)</li>
+                <li><strong>11 Gbps/pin</strong> using QDR (PAM4-equivalent over DDR)</li>
+                <li>Up to 12 GB capacity (Titan Xp)</li>
+                <li>484&ndash;547 GB/s effective</li>
+                <li>No ECC on consumer SKUs</li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+<section class="slide" id="slide-09">
+    <div class="slide-number">09</div>
+    <h2>NVLink 1.0 &mdash; The Original</h2>
+    <p>NVLink 1.0 is Pascal's other industry-first. <strong>Each link is 8 differential pairs &times; 20 Gbps NRZ = 20 GB/s/dir = 40 GB/s/link bidirectional.</strong> P100 has 4 NVLinks for an aggregate <strong>80 GB/s/dir, 160 GB/s bidirectional</strong> &mdash; ~5&times; PCIe 3.0 x16. Topology: in DGX-1, eight P100s wired in a hybrid cube-mesh; no NVSwitch yet, so most pairs reach each other through 2 hops.</p>
+
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Property</th><th>NVLink 1.0</th><th>PCIe 3.0 x16</th></tr></thead>
+            <tbody>
+                <tr><td>Per-direction BW</td><td>20 GB/s/link</td><td>16 GB/s</td></tr>
+                <tr><td>Links per P100</td><td>4</td><td>1 host link</td></tr>
+                <tr><td>Aggregate per GPU</td><td>80 GB/s</td><td>16 GB/s</td></tr>
+                <tr><td>Latency (D2D)</td><td>~1 &micro;s</td><td>~1 &micro;s</td></tr>
+                <tr><td>Coherent</td><td>No (raw P2P)</td><td>No</td></tr>
+                <tr><td>Cable / signalling</td><td>NRZ, 20 Gbps/lane, twin-ax</td><td>NRZ, 8 GT/s</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="callout">
+        <div class="callout-label">P9 + NVLink</div>
+        <p>IBM's POWER9 was the only host CPU that connected to NVLink directly &mdash; OpenPOWER systems like the Summit supercomputer at Oak Ridge ran <em>all</em> CPU-GPU traffic over NVLink, not PCIe. Volta inherited this; x86 hosts were stuck with PCIe until Grace arrived in 2023.</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-10">
+    <div class="slide-number">10</div>
+    <h2>PCIe 3.0, Display, NVENC/NVDEC</h2>
+    <div class="diagram-grid cols-3">
+        <div class="diagram-panel accent-border">
+            <h4>PCIe 3.0 x16</h4>
+            <p>Single host link at 8 GT/s, 16 GB/s/dir. Resizable BAR not yet a thing in 2016 mainstream BIOS. ATS (Address Translation Services) supported.</p>
+        </div>
+        <div class="diagram-panel accent-border">
+            <h4>NVENC / NVDEC</h4>
+            <p>Dedicated H.264 encode + HEVC encode (8b only); HEVC + VP9 decode. ~2&times; 1080p60 streams encode per chip. Tesla P4 became the cloud transcoding workhorse.</p>
+        </div>
+        <div class="diagram-panel accent-border">
+            <h4>Display engine</h4>
+            <p>Up to 4 displays, DisplayPort 1.4, HDMI 2.0b, HDR10. Pascal added simultaneous multi-projection and lens-matched shading for early VR headsets.</p>
+        </div>
+    </div>
+</section>
+
+<section class="slide" id="slide-11">
+    <div class="slide-number">11</div>
+    <h2>Pascal's Innovations &mdash; What It Put on the Map</h2>
+    <ul>
+        <li><strong>HBM2 in production.</strong> First commercial NVIDIA part with 2.5D HBM packaging (P100, June 2016). The interposer process and stack supply chain that Hopper and Blackwell still use trace back here.</li>
+        <li><strong>NVLink 1.0.</strong> The first GPU-to-GPU coherent-ish high-speed link &mdash; the foundation every later NVL generation builds on.</li>
+        <li><strong>FP16x2 packed math.</strong> First widely-used hardware acceleration for half-precision deep learning. Set the precedent for tensor-core formats.</li>
+        <li><strong>Unified memory page faulting.</strong> Pascal added hardware support for handling page faults on the GPU, allowing CUDA managed memory to oversubscribe the GPU's VRAM &mdash; pages migrate on demand.</li>
+        <li><strong>GPU Boost 3.0.</strong> Per-V/F-state overclocking; the framework still in <code>nvidia-smi</code> today.</li>
+        <li><strong>16 nm FinFET.</strong> First NVIDIA FinFET node; doubled density and cut leakage versus Maxwell 28 nm.</li>
+        <li><strong>SXM2 mezzanine.</strong> Standardised the proprietary mezzanine connector that became HGX A100 / H100 / B200's basis.</li>
+    </ul>
+</section>
+
+<section class="slide" id="slide-12">
+    <div class="slide-number">12</div>
+    <h2>Interactive: Pascal SKU Picker</h2>
+    <div class="control-panel">
+        <div class="control-row">
+            <label for="p-sku">Pascal SKU</label>
+            <select id="p-sku">
+                <option value="p100sxm">Tesla P100 SXM2 16 GB</option>
+                <option value="p100pcie">Tesla P100 PCIe 16 GB</option>
+                <option value="ti">GTX 1080 Ti 11 GB</option>
+                <option value="titan">Titan Xp 12 GB</option>
+                <option value="1080">GTX 1080 8 GB</option>
+                <option value="1070">GTX 1070 8 GB</option>
+                <option value="1060">GTX 1060 6 GB</option>
+                <option value="p4">Tesla P4 8 GB</option>
+                <option value="p40">Tesla P40 24 GB</option>
+            </select>
+        </div>
+        <div class="metric-grid">
+            <div class="metric"><div class="metric-label">Die</div><div class="metric-value" id="p-die">&mdash;</div></div>
+            <div class="metric"><div class="metric-label">SMs</div><div class="metric-value" id="p-sms">&mdash;</div></div>
+            <div class="metric"><div class="metric-label">FP32 TFLOPS</div><div class="metric-value" id="p-fp32">&mdash;</div></div>
+            <div class="metric"><div class="metric-label">FP16x2 TFLOPS</div><div class="metric-value" id="p-fp16">&mdash;</div></div>
+            <div class="metric"><div class="metric-label">VRAM</div><div class="metric-value" id="p-vram">&mdash;</div></div>
+            <div class="metric"><div class="metric-label">BW (GB/s)</div><div class="metric-value" id="p-bw">&mdash;</div></div>
+            <div class="metric"><div class="metric-label">TDP</div><div class="metric-value" id="p-tdp">&mdash;</div></div>
+            <div class="metric"><div class="metric-label">NVLink</div><div class="metric-value" id="p-nvl">&mdash;</div></div>
+        </div>
+        <div id="p-out" class="result-box"></div>
+    </div>
+
+    <script>
+    (function(){
+        const data = {
+            'p100sxm': { die:'GP100', sms:56, fp32:10.6, fp16:21.2, vram:'16 GB HBM2', bw:720, tdp:'300 W', nvl:'4 NVLink 1.0', note:'Datacenter HPC + early DL training. SXM2 mezzanine.' },
+            'p100pcie':{ die:'GP100', sms:56, fp32:9.3,  fp16:18.7, vram:'16 GB HBM2', bw:720, tdp:'250 W', nvl:'2 NVLink (some boards)', note:'PCIe form factor; same die, lower clocks.' },
+            'ti':      { die:'GP102', sms:28, fp32:11.3, fp16:0.18, vram:'11 GB GDDR5X', bw:484, tdp:'250 W', nvl:'no', note:'Consumer flagship; FP16 is 1:64 of FP32 on GP102 (no FP16x2).' },
+            'titan':   { die:'GP102', sms:30, fp32:12.0, fp16:0.19, vram:'12 GB GDDR5X', bw:547, tdp:'250 W', nvl:'no', note:'Full GP102 die; effectively a workstation card with consumer drivers.' },
+            '1080':    { die:'GP104', sms:20, fp32:8.9,  fp16:0.14, vram:'8 GB GDDR5X', bw:320, tdp:'180 W', nvl:'no', note:'Best-selling consumer Pascal; 8 GB makes it just enough for early ML hobbyists.' },
+            '1070':    { die:'GP104', sms:15, fp32:6.5,  fp16:0.10, vram:'8 GB GDDR5', bw:256, tdp:'150 W', nvl:'no', note:'Cut GP104; same memory capacity as 1080 with reduced compute.' },
+            '1060':    { die:'GP106', sms:10, fp32:4.4,  fp16:0.07, vram:'6 GB GDDR5', bw:192, tdp:'120 W', nvl:'no', note:'Mid-range; 3 GB and 6 GB variants.' },
+            'p4':      { die:'GP104', sms:20, fp32:5.5,  fp16:0.09, vram:'8 GB GDDR5', bw:192, tdp:'75 W',  nvl:'no', note:'Datacenter inference; passive, no aux power, slot-only.' },
+            'p40':     { die:'GP102', sms:30, fp32:12.0, fp16:0.19, vram:'24 GB GDDR5', bw:346, tdp:'250 W', nvl:'no', note:'Datacenter inference at large memory; 24 GB still useful for ML labs in 2026 used markets.' }
+        };
+        function rec(){
+            const k = document.getElementById('p-sku').value;
+            const d = data[k];
+            document.getElementById('p-die').textContent = d.die;
+            document.getElementById('p-sms').textContent = d.sms;
+            document.getElementById('p-fp32').textContent = d.fp32 + ' TF';
+            document.getElementById('p-fp16').textContent = d.fp16 + ' TF';
+            document.getElementById('p-vram').textContent = d.vram;
+            document.getElementById('p-bw').textContent = d.bw;
+            document.getElementById('p-tdp').textContent = d.tdp;
+            document.getElementById('p-nvl').textContent = d.nvl;
+            document.getElementById('p-out').innerHTML = '<div><span class="line-label">role</span> &rarr; <span class="line-val">' + d.note + '</span></div>';
+        }
+        document.getElementById('p-sku').addEventListener('change', rec);
+        rec();
+    })();
+    </script>
+</section>
+<!-- ════════════════════════════════════ Footer ════════════════════════════════════ -->
+<footer class="footer">
+    <p>Part of the <a href="https://github.com/BrendanJamesLynskey/LLMs#nvidia-gpu-architectures">NVIDIA GPU Architectures Series</a></p>
+    <p style="margin-top: 0.5rem; font-size: 0.8rem;"><a href="https://github.com/BrendanJamesLynskey/LLMs#nvidia-gpu-architectures">Back to Series Index</a></p>
+</footer>
+
+<script>
+    // Smooth scroll for TOC links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+    });
+
+    // Subtle fade-in on scroll
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.slide').forEach(slide => {
+        slide.style.opacity = '0';
+        slide.style.transform = 'translateY(30px)';
+        slide.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+        observer.observe(slide);
+    });
+</script>
+
+</body>
+</html>
