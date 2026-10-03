@@ -982,7 +982,7 @@
 <section class="slide" id="slide-08">
     <div class="slide-number">08</div>
     <h2>Memory &mdash; HBM2 First Time, GDDR5X Second</h2>
-    <p>Pascal shipped the <strong>industry's first HBM2 product</strong>. P100 connects to 4 stacks of 4-Hi HBM2 over a 4096-bit bus; each stack is 4 GB at launch. GP10x graphics dies use GDDR5 or the new GDDR5X (Micron's PAM4-on-DDR variant, doubling bandwidth at the same data rate as GDDR5).</p>
+    <p>Pascal shipped the <strong>industry's first HBM2 product</strong>. P100 connects to 4 stacks of 4-Hi HBM2 over a 4096-bit bus; each stack is 4 GB at launch. GP10x graphics dies use GDDR5 or the new GDDR5X (Micron's quad-data-rate variant, still NRZ signalling, doubling the per-pin rate at the same clock as GDDR5).</p>
 
     <div class="diagram-grid cols-2">
         <div class="diagram-panel accent-border">
@@ -999,7 +999,7 @@
             <h4>GDDR5X (1080 Ti / 1080 / Titan Xp)</h4>
             <ul>
                 <li><strong>352-bit bus</strong> on GP102 (11 channels &times; 32-bit)</li>
-                <li><strong>11 Gbps/pin</strong> using QDR (PAM4-equivalent over DDR)</li>
+                <li><strong>11 Gbps/pin</strong> using QDR (NRZ; PAM4 arrived later with GDDR6X)</li>
                 <li>Up to 12 GB capacity (Titan Xp)</li>
                 <li>484&ndash;547 GB/s effective</li>
                 <li>No ECC on consumer SKUs</li>
@@ -1011,7 +1011,7 @@
 <section class="slide" id="slide-09">
     <div class="slide-number">09</div>
     <h2>NVLink 1.0 &mdash; The Original</h2>
-    <p>NVLink 1.0 is Pascal's other industry-first. <strong>Each link is 8 differential pairs &times; 20 Gbps NRZ = 20 GB/s/dir = 40 GB/s/link bidirectional.</strong> P100 has 4 NVLinks for an aggregate <strong>80 GB/s/dir, 160 GB/s bidirectional</strong> &mdash; ~5&times; PCIe 3.0 x16. Topology: in DGX-1, eight P100s wired in a hybrid cube-mesh; no NVSwitch yet, so most pairs reach each other through 2 hops.</p>
+    <p>NVLink 1.0 is Pascal's other industry-first. <strong>Each link is 8 differential pairs &times; 20 Gbps NRZ = 20 GB/s/dir = 40 GB/s/link bidirectional.</strong> P100 has 4 NVLinks for an aggregate <strong>80 GB/s/dir, 160 GB/s bidirectional</strong> &mdash; ~5&times; PCIe 3.0 x16. Topology: in DGX-1, eight P100s wired in a hybrid cube-mesh; no NVSwitch yet, so with 4 links per GPU only 16 of the 28 GPU pairs are directly linked; the other 12 take 2 hops.</p>
 
     <div class="table-wrap">
         <table>
@@ -1101,7 +1101,7 @@
     (function(){
         const data = {
             'p100sxm': { die:'GP100', sms:56, fp32:10.6, fp16:21.2, vram:'16 GB HBM2', bw:720, tdp:'300 W', nvl:'4 NVLink 1.0', note:'Datacenter HPC + early DL training. SXM2 mezzanine.' },
-            'p100pcie':{ die:'GP100', sms:56, fp32:9.3,  fp16:18.7, vram:'16 GB HBM2', bw:720, tdp:'250 W', nvl:'2 NVLink (some boards)', note:'PCIe form factor; same die, lower clocks.' },
+            'p100pcie':{ die:'GP100', sms:56, fp32:9.3,  fp16:18.7, vram:'16 GB HBM2', bw:720, tdp:'250 W', nvl:'no', note:'PCIe form factor; same die, lower clocks.' },
             'ti':      { die:'GP102', sms:28, fp32:11.3, fp16:0.18, vram:'11 GB GDDR5X', bw:484, tdp:'250 W', nvl:'no', note:'Consumer flagship; FP16 is 1:64 of FP32 on GP102 (no FP16x2).' },
             'titan':   { die:'GP102', sms:30, fp32:12.0, fp16:0.19, vram:'12 GB GDDR5X', bw:547, tdp:'250 W', nvl:'no', note:'Full GP102 die; effectively a workstation card with consumer drivers.' },
             '1080':    { die:'GP104', sms:20, fp32:8.9,  fp16:0.14, vram:'8 GB GDDR5X', bw:320, tdp:'180 W', nvl:'no', note:'Best-selling consumer Pascal; 8 GB makes it just enough for early ML hobbyists.' },
